@@ -3,7 +3,7 @@
  *  as a single UPS via its Modbus TCP interface.
  *
  *  Copyright (C)
- *    2026  Miklos Bagi <mb_claude@mbag.at>
+ *    2026  Miklos Bagi <mb_sigennut@mbag.at>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
