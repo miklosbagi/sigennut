@@ -1,7 +1,9 @@
 🇬🇧 [English](README.md) | 🇭🇺 [Magyar](README.hu.md)
 
 [![CI](https://github.com/miklosbagi/sigennut/actions/workflows/ci.yml/badge.svg)](https://github.com/miklosbagi/sigennut/actions/workflows/ci.yml)
+[![e2e](https://github.com/miklosbagi/sigennut/actions/workflows/e2e.yml/badge.svg)](https://github.com/miklosbagi/sigennut/actions/workflows/e2e.yml)
 [![CodeQL](https://github.com/miklosbagi/sigennut/actions/workflows/codeql.yml/badge.svg)](https://github.com/miklosbagi/sigennut/actions/workflows/codeql.yml)
+
 [![Latest release](https://img.shields.io/github/v/release/miklosbagi/sigennut)](https://github.com/miklosbagi/sigennut/releases/latest)
 [![Docker pulls](https://img.shields.io/docker/pulls/miklosbagi/sigennut)](https://hub.docker.com/r/miklosbagi/sigennut)
 [![Image size](https://img.shields.io/docker/image-size/miklosbagi/sigennut/latest)](https://hub.docker.com/r/miklosbagi/sigennut)
