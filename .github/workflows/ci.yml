@@ -12,11 +12,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # startup.sh is kept near-verbatim from gpdm/nut-upsd (BSD license
+      # notice intact, see README.md) -- not ours to rewrite for style.
+      # Only fail on things that would actually break it.
       - name: Shellcheck startup.sh
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends shellcheck
-          shellcheck docker/files/startup.sh
+          shellcheck --severity=error docker/files/startup.sh
 
       - name: Build the sigennut image
         run: docker build -f docker/Dockerfile -t sigennut:ci .
