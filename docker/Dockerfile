@@ -65,7 +65,7 @@ RUN ./autogen.sh && \
 
 FROM alpine:edge
 
-MAINTAINER Miklos Bagi
+LABEL maintainer="Miklos Bagi <mb_sigennut@mbag.at>"
 
 ARG BUILD_DATE
 ARG VCS_REF
