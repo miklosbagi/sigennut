@@ -1,0 +1,36 @@
+name: PR version label
+
+on:
+  pull_request:
+    types: [opened, labeled, unlabeled, synchronize]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  validate-version-label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Default to Tag/Patch on a brand-new PR
+        if: github.event.action == 'opened'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          labels=$(gh pr view "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}" --json labels --jq '.labels[].name')
+          if ! grep -qE '^Tag/(Patch|Minor|Major)$' <<< "$labels"; then
+            gh pr edit "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}" --add-label "Tag/Patch"
+          fi
+
+      - name: Exactly one Tag/* label, or none at all
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Re-read labels rather than trusting the event payload -- the
+          # step above may have just changed them.
+          labels=$(gh pr view "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}" --json labels --jq '.labels[].name')
+          count=$(grep -cE '^Tag/(Patch|Minor|Major)$' <<< "$labels" || true)
+          echo "Tag/* labels present: $count"
+          if [ "$count" -gt 1 ]; then
+            echo "::error::More than one Tag/Patch, Tag/Minor, Tag/Major label is present -- pick exactly one, or remove all of them to skip versioning this PR."
+            exit 1
+          fi
