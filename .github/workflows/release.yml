@@ -21,6 +21,9 @@ jobs:
   tag-and-release:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.version.outputs.new_version }}
+      skip: ${{ steps.bump.outputs.skip }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -81,3 +84,11 @@ jobs:
             --target "${{ github.event.pull_request.merge_commit_sha }}" \
             --title "${{ steps.version.outputs.new_version }}" \
             --generate-notes
+
+  docker-publish:
+    needs: tag-and-release
+    if: needs.tag-and-release.outputs.skip != 'true'
+    uses: ./.github/workflows/docker-publish.yml
+    with:
+      version: ${{ needs.tag-and-release.outputs.new_version }}
+    secrets: inherit
