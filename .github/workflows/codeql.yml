@@ -1,0 +1,57 @@
+name: CodeQL
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  schedule:
+    - cron: "37 6 * * 3"
+
+jobs:
+  analyze:
+    name: Analyze (cpp)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            autoconf automake libtool pkg-config libmodbus-dev
+
+      - name: Fetch upstream NUT and vendor in the driver
+        run: |
+          git clone --depth 1 --branch master https://github.com/networkupstools/nut.git
+          cp driver/sigenergy_modbus.c nut/drivers/sigenergy_modbus.c
+          cd nut
+          git apply ../driver/sigenergy_modbus-makefile.patch
+
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: cpp
+          queries: security-and-quality
+
+      # Only the one driver, with the same configure flags docker/Dockerfile
+      # uses (must match Alpine's own 'nut' package build so a real image's
+      # compiled-in CONFPATH/STATEPATH agree with the rest of the toolchain
+      # -- irrelevant to CodeQL itself, but keeps this build path identical
+      # to the one that actually ships).
+      - name: Build sigenergy_modbus
+        run: |
+          cd nut
+          WITHOUT_NUT_AUGEAS=true ./autogen.sh
+          ./configure --with-modbus --with-drivers=sigenergy_modbus \
+            --with-serial=no --with-usb=no --with-snmp=no --with-macosx-ups=no \
+            --prefix=/usr --sysconfdir=/etc/nut --with-statepath=/var/run/nut \
+            --with-user=nut --with-group=nut
+          make -C drivers sigenergy_modbus
+
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:cpp"
