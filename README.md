@@ -44,13 +44,12 @@ docker compose up -d --build
 upsc sigen@localhost
 ```
 
-This builds and runs `sigennut` alongside
-[InvForge](https://github.com/miklosbagi/invforge), a multi-vendor
-inverter/BESS simulator, pre-loaded with real captured SigenStor register
-data — so you can see it working with zero hardware. See
-`docker-compose.yml`. That builds both images from source (this repo's
-`docker/Dockerfile`, InvForge's own repo via a git-context build) — good
-for testing local changes to either, slower otherwise.
+This builds `sigennut` from this checkout's local source
+(`docker/Dockerfile`) and runs it alongside
+[InvForge](https://github.com/miklosbagi/invforge)'s own published
+`:latest` image, pre-loaded with real captured SigenStor register data —
+so you can see it working with zero hardware, and testing local driver
+changes doesn't need InvForge rebuilt too. See `docker-compose.yml`.
 
 ## docker-compose examples (published images, no repo checkout needed)
 
@@ -125,6 +124,28 @@ volume mount, `docker/files/startup.sh` (copied near-verbatim, BSD license
 notice intact) refuses to start unless that volume is mounted and every
 config file is exactly mode `0440` owned by `nut:nut`, then runs
 `upsdrvctl start` followed by `exec upsd -D`.
+
+## Testing
+
+- `.github/workflows/ci.yml` — builds the image, shellchecks
+  `startup.sh` (error severity only — see the file's own comment for
+  why), and a smoke test confirming the whole stack comes up and
+  reports data. A separate job re-runs the same smoke test against
+  whatever's currently published on Docker Hub, since that validates
+  the README's own quickstart, not this PR's code.
+- `tests/e2e/` — scenario-level assertions on the actual NUT semantics:
+  builds `sigennut` from this checkout's source, runs it against
+  InvForge's published `:latest`, and checks `upsc`'s real output across
+  battery states (`OL`, `OB DISCHRG`, `LB`, `CHRG`, and `OB DISCHRG LB`
+  combined) — two from real captured device data, two from direct
+  register overrides via InvForge's `/state` endpoint (deterministic,
+  no ramp-timing dependency). Run locally:
+  ```sh
+  docker compose -f tests/e2e/docker-compose.yml up -d --build
+  pip install -r tests/e2e/requirements.txt
+  pytest tests/e2e -v
+  docker compose -f tests/e2e/docker-compose.yml down -v
+  ```
 
 ## License
 

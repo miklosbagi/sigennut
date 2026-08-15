@@ -1,8 +1,10 @@
-# Quickstart demo: sigennut + InvForge (a multi-vendor inverter/BESS
-# simulator, https://github.com/miklosbagi/invforge), so you can try
-# this out with zero real hardware. Building InvForge straight from its
-# GitHub repo (Docker supports git URLs as a build context) means this
-# file is self-contained -- no need to clone InvForge separately.
+# Quickstart demo: sigennut (built from this checkout's local source, so
+# it reflects whatever's currently on disk) + InvForge (a multi-vendor
+# inverter/BESS simulator, https://github.com/miklosbagi/invforge),
+# pulled as its own published :latest image rather than built from git
+# source -- it's a stable, independently-versioned/tested dependency
+# here, not something this repo's changes ever touch, so there's no
+# reason to rebuild it from source on every run.
 #
 # To test against your own SigenStor instead: skip the `invforge`
 # service, point `docker/files/ups.conf.sample` at your device's
@@ -11,8 +13,7 @@
 
 services:
   invforge:
-    build:
-      context: https://github.com/miklosbagi/invforge.git
+    image: miklosbagi/invforge:latest
     # Preload a real captured idle/full-SoC scenario so `upsc sigen@localhost`
     # shows real data immediately, not all-zero default register state.
     command:

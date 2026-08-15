@@ -1,0 +1,51 @@
+# Stack for the scenario/battery-state e2e tests (see test_battery_states.py):
+# sigennut built from this checkout's local source (so the tests exercise
+# whatever's actually being changed, e.g. in an open PR), InvForge as its
+# own published :latest image (a stable dependency, not what's under test
+# here).
+
+services:
+  invforge:
+    image: miklosbagi/invforge:latest
+    ports:
+      - "5020:502"
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:8080/health"]
+      interval: 2s
+      timeout: 2s
+      retries: 5
+      start_period: 5s
+
+  # See ../../examples/docker-compose.emulator.yml for why this is a
+  # one-shot init container into a named volume, not compose's own
+  # `configs:` mechanism.
+  nut-config-init:
+    image: alpine:edge
+    volumes:
+      - nut-config:/etc/nut
+    command: >
+      sh -c '
+      printf "[sigen]\n  driver = sigenergy_modbus\n  port = invforge:502\n  desc = sigennut-e2e\n" > /etc/nut/ups.conf &&
+      printf "LISTEN 0.0.0.0 3493\n" > /etc/nut/upsd.conf &&
+      printf "[monuser]\n  password = test\n  upsmon primary\n" > /etc/nut/upsd.users &&
+      chown 100:101 /etc/nut/ups.conf /etc/nut/upsd.conf /etc/nut/upsd.users &&
+      chmod 0440 /etc/nut/ups.conf /etc/nut/upsd.conf /etc/nut/upsd.users
+      '
+
+  sigennut:
+    build:
+      context: ../..
+      dockerfile: docker/Dockerfile
+    depends_on:
+      invforge:
+        condition: service_healthy
+      nut-config-init:
+        condition: service_completed_successfully
+    volumes:
+      - nut-config:/etc/nut:ro
+    ports:
+      - "3493:3493"
+
+volumes:
+  nut-config:
