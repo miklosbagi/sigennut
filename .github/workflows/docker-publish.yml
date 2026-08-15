@@ -1,12 +1,31 @@
 name: Docker publish
 
-# Fires once release.yml (see .github/workflows/release.yml) actually
-# publishes a release -- not on every push -- so an image only ever
-# gets built for a real, tagged version, never for an in-progress PR.
+# Deliberately NOT triggered by `on: release` -- release.yml creates
+# releases using the default GITHUB_TOKEN, and GitHub's own anti-
+# recursion rule means events performed with GITHUB_TOKEN never trigger
+# other workflows. Confirmed empirically: the first attempt used
+# `on: release: types: [published]` and it silently never fired for
+# real releases, only when manually re-run. So instead:
+#
+# - release.yml calls this directly as a second job in the *same*
+#   workflow run (see its `docker-publish` job) -- not a second
+#   triggered run, so the GITHUB_TOKEN restriction doesn't apply.
+# - workflow_dispatch lets this be re-run by hand for any already-tagged
+#   version, e.g. to backfill a release that predates this workflow
+#   existing: `gh workflow run docker-publish.yml -f version=0.0.2`.
 
 on:
-  release:
-    types: [published]
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to build and push (must match an existing git tag)"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -18,7 +37,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ inputs.version }}
 
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
@@ -44,7 +63,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            miklosbagi/sigennut:${{ github.event.release.tag_name }}
+            miklosbagi/sigennut:${{ inputs.version }}
             miklosbagi/sigennut:latest
-            ghcr.io/miklosbagi/sigennut:${{ github.event.release.tag_name }}
+            ghcr.io/miklosbagi/sigennut:${{ inputs.version }}
             ghcr.io/miklosbagi/sigennut:latest
