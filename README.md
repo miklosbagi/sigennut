@@ -1,3 +1,5 @@
+🇬🇧 [English](README.md) | 🇭🇺 [Magyar](README.hu.md)
+
 # sigennut
 
 A [Network UPS Tools (NUT)](https://networkupstools.org/) driver that lets
