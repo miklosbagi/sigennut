@@ -1,3 +1,13 @@
+🇬🇧 [English](README.md) | 🇭🇺 [Magyar](README.hu.md)
+
+[![CI](https://github.com/miklosbagi/sigennut/actions/workflows/ci.yml/badge.svg)](https://github.com/miklosbagi/sigennut/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/miklosbagi/sigennut/actions/workflows/codeql.yml/badge.svg)](https://github.com/miklosbagi/sigennut/actions/workflows/codeql.yml)
+[![Latest release](https://img.shields.io/github/v/release/miklosbagi/sigennut)](https://github.com/miklosbagi/sigennut/releases/latest)
+[![Docker pulls](https://img.shields.io/docker/pulls/miklosbagi/sigennut)](https://hub.docker.com/r/miklosbagi/sigennut)
+[![Image size](https://img.shields.io/docker/image-size/miklosbagi/sigennut/latest)](https://hub.docker.com/r/miklosbagi/sigennut)
+[![License](https://img.shields.io/github/license/miklosbagi/sigennut)](LICENSE)
+[![Maintained](https://img.shields.io/badge/maintained-yes-green.svg)](https://github.com/miklosbagi/sigennut/graphs/commit-activity)
+
 # sigennut
 
 A [Network UPS Tools (NUT)](https://networkupstools.org/) driver that lets
