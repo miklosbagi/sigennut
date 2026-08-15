@@ -1,0 +1,62 @@
+# sigennut + InvForge (https://github.com/miklosbagi/invforge), both as
+# published images -- no repo checkout needed for either. Zero real
+# hardware required; InvForge preloads a real captured SigenStor
+# idle/full-SoC scenario so `upsc sigen@localhost` shows real data
+# immediately.
+#
+# Usage:
+#   docker compose -f docker-compose.emulator.yml up -d
+#   upsc sigen@localhost
+
+services:
+  invforge:
+    image: miklosbagi/invforge:latest
+    command:
+      - "--vendor=sigenergy"
+      - "--firmware=V100R001C21SPC116"
+      - "--scenario=2026-08-14-idle-full-soc"
+    ports:
+      - "5020:502"
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:8080/health"]
+      interval: 2s
+      timeout: 2s
+      retries: 5
+      start_period: 5s
+
+  # gpdm/nut-upsd's own convention (which the sigennut image follows)
+  # requires /etc/nut's config files to be exactly mode 0440, owned by
+  # uid 100 / gid 101 (the image's 'nut' user) -- and it checks that
+  # /etc/nut itself is a real mounted volume, which rules out generating
+  # config via compose's own `configs:` (that mounts individual files,
+  # not the directory, so the check fails). A one-shot init container
+  # writing into a named volume satisfies both requirements, entirely
+  # inline -- no local files needed at all.
+  nut-config-init:
+    image: alpine:edge
+    volumes:
+      - nut-config:/etc/nut
+    command: >
+      sh -c '
+      printf "[sigen]\n  driver = sigenergy_modbus\n  port = invforge:502\n  desc = sigennut-demo\n" > /etc/nut/ups.conf &&
+      printf "LISTEN 0.0.0.0 3493\n" > /etc/nut/upsd.conf &&
+      printf "[monuser]\n  password = test\n  upsmon primary\n" > /etc/nut/upsd.users &&
+      chown 100:101 /etc/nut/ups.conf /etc/nut/upsd.conf /etc/nut/upsd.users &&
+      chmod 0440 /etc/nut/ups.conf /etc/nut/upsd.conf /etc/nut/upsd.users
+      '
+
+  sigennut:
+    image: miklosbagi/sigennut:latest
+    depends_on:
+      invforge:
+        condition: service_healthy
+      nut-config-init:
+        condition: service_completed_successfully
+    volumes:
+      - nut-config:/etc/nut:ro
+    ports:
+      - "3493:3493"
+
+volumes:
+  nut-config:
