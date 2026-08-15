@@ -92,7 +92,7 @@
 upsdrv_info_t upsdrv_info = {
 	DRIVER_NAME,
 	DRIVER_VERSION,
-	"Miklos Bagi <mb_claude@mbag.at>",
+	"Miklos Bagi <mb_sigennut@mbag.at>",
 	DRV_EXPERIMENTAL,
 	{ NULL }
 };
