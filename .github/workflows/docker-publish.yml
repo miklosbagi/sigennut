@@ -1,0 +1,50 @@
+name: Docker publish
+
+# Fires once release.yml (see .github/workflows/release.yml) actually
+# publishes a release -- not on every push -- so an image only ever
+# gets built for a real, tagged version, never for an in-progress PR.
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            miklosbagi/sigennut:${{ github.event.release.tag_name }}
+            miklosbagi/sigennut:latest
+            ghcr.io/miklosbagi/sigennut:${{ github.event.release.tag_name }}
+            ghcr.io/miklosbagi/sigennut:latest
