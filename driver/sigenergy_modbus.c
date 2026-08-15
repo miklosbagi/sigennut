@@ -3,7 +3,7 @@
  *  as a single UPS via its Modbus TCP interface.
  *
  *  Copyright (C)
- *    2026  Miklos Bagi <mb_claude@mbag.at>
+ *    2026  Miklos Bagi <mb_sigennut@mbag.at>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -92,7 +92,7 @@
 upsdrv_info_t upsdrv_info = {
 	DRIVER_NAME,
 	DRIVER_VERSION,
-	"Miklos Bagi <mb_claude@mbag.at>",
+	"Miklos Bagi <mb_sigennut@mbag.at>",
 	DRV_EXPERIMENTAL,
 	{ NULL }
 };
