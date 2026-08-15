@@ -1,0 +1,18 @@
+# Sample ups.conf for the sigennut image.
+#
+# Copy to config/ups.conf, then:
+#   chmod 0440 config/ups.conf
+#   chown 100:101 config/ups.conf     (uid/gid of the 'nut' user/group
+#                                       inside the Alpine-based image)
+#
+# Point "port" at your real SigenStor's Modbus TCP address (host:port,
+# default Modbus port 502). Don't have hardware to test against yet?
+# https://github.com/miklosbagi/invforge is a multi-vendor inverter/BESS
+# simulator that speaks the same real, captured register data -- run it
+# alongside this image (see this repo's docker-compose.yml) and point
+# "port" at its container name instead.
+
+[sigen]
+	driver = sigenergy_modbus
+	port = 192.0.2.1:502
+	desc = "Sigenergy SigenStor"

@@ -1,0 +1,22 @@
+diff --git a/drivers/Makefile.am b/drivers/Makefile.am
+index 982c9d208..c2878f5b4 100644
+--- a/drivers/Makefile.am
++++ b/drivers/Makefile.am
+@@ -167,7 +167,7 @@ SERIAL_USB_DRIVERLIST = \
+ 	nutdrv_qx
+ NEONXML_DRIVERLIST = netxml-ups
+ MACOSX_DRIVERLIST = macosx-ups
+-MODBUS_DRIVERLIST = phoenixcontact_modbus generic_modbus huawei-ups2000 socomec_jbus adelsystem_cbi apc_modbus must_ep2000pro
++MODBUS_DRIVERLIST = phoenixcontact_modbus generic_modbus huawei-ups2000 socomec_jbus adelsystem_cbi apc_modbus must_ep2000pro sigenergy_modbus
+ LINUX_I2C_DRIVERLIST = asem pijuice hwmon_ina219
+ POWERMAN_DRIVERLIST = powerman-pdu
+ IPMI_DRIVERLIST = nut-ipmipsu
+@@ -457,6 +457,8 @@ phoenixcontact_modbus_SOURCES = phoenixcontact_modbus.c
+ phoenixcontact_modbus_LDADD = $(LDADD_DRIVERS) $(LIBMODBUS_LIBS)
+ generic_modbus_SOURCES = generic_modbus.c
+ generic_modbus_LDADD = $(LDADD_DRIVERS) $(LIBMODBUS_LIBS)
++sigenergy_modbus_SOURCES = sigenergy_modbus.c
++sigenergy_modbus_LDADD = $(LDADD_DRIVERS) $(LIBMODBUS_LIBS)
+ adelsystem_cbi_SOURCES = adelsystem_cbi.c
+ adelsystem_cbi_LDADD = $(LDADD_DRIVERS) $(LIBMODBUS_LIBS)
+ 

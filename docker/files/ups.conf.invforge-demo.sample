@@ -1,0 +1,12 @@
+# ups.conf used by this repo's docker-compose.yml demo -- points at the
+# InvForge simulator service (https://github.com/miklosbagi/invforge)
+# running alongside sigennut on the same compose network, so you can
+# try this image out with zero hardware. "invforge" below is that
+# service's container-DNS name, not a host port.
+#
+# For real hardware, see ups.conf.sample instead.
+
+[sigen]
+	driver = sigenergy_modbus
+	port = invforge:502
+	desc = "Sigenergy SigenStor via InvForge simulator (docker compose demo)"

@@ -1,0 +1,10 @@
+# Sample upsd.conf for the nut-upsd test image.
+#
+# Copy to ../../config/upsd.conf, then:
+#   chmod 0440 ../../config/upsd.conf
+#   chown 100:101 ../../config/upsd.conf
+
+# Listen on all interfaces inside the container -- the container's own
+# network boundary (compose's bridge network / published port) is the
+# actual access control here, not this LISTEN line.
+LISTEN 0.0.0.0 3493

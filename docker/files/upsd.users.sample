@@ -1,0 +1,12 @@
+# Sample upsd.users for the nut-upsd test image.
+#
+# Copy to ../../config/upsd.users, then:
+#   chmod 0440 ../../config/upsd.users
+#   chown 100:101 ../../config/upsd.users
+#
+# Test-only credentials -- change before using this rig for anything
+# beyond local/CI integration testing.
+
+[monuser]
+	password = test
+	upsmon primary

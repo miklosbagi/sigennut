@@ -1,0 +1,69 @@
+# Quickstart demo: sigennut + InvForge (a multi-vendor inverter/BESS
+# simulator, https://github.com/miklosbagi/invforge), so you can try
+# this out with zero real hardware. Building InvForge straight from its
+# GitHub repo (Docker supports git URLs as a build context) means this
+# file is self-contained -- no need to clone InvForge separately.
+#
+# To test against your own SigenStor instead: skip the `invforge`
+# service, point `docker/files/ups.conf.sample` at your device's
+# host:port, and mount that file into a `sigennut` container the same
+# way `nut-config-init` does below. See README.md.
+
+services:
+  invforge:
+    build:
+      context: https://github.com/miklosbagi/invforge.git
+    # Preload a real captured idle/full-SoC scenario so `upsc sigen@localhost`
+    # shows real data immediately, not all-zero default register state.
+    command:
+      - "--vendor=sigenergy"
+      - "--firmware=V100R001C21SPC116"
+      - "--modbus-port=502"
+      - "--control-port=8080"
+      - "--scenario=2026-08-14-idle-full-soc"
+    ports:
+      - "5020:502"
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:8080/health"]
+      interval: 2s
+      timeout: 2s
+      retries: 5
+      start_period: 5s
+
+  # See ../nut-sigenergy/docker/README.md for why this is a one-shot
+  # init container rather than a host-side chmod/chown: gpdm/nut-upsd's
+  # convention requires /etc/nut config files to be exactly mode 0440
+  # owned by uid 100 / gid 101 (the image's 'nut' user), which needs
+  # root -- doing it here, inside Linux, avoids needing `sudo` on the
+  # host at all, on any OS.
+  nut-config-init:
+    image: alpine:edge
+    volumes:
+      - ./docker/files:/src:ro
+      - nut-config:/etc/nut
+    command: >
+      sh -c "
+      cp /src/ups.conf.invforge-demo.sample /etc/nut/ups.conf &&
+      cp /src/upsd.conf.sample /etc/nut/upsd.conf &&
+      cp /src/upsd.users.sample /etc/nut/upsd.users &&
+      chown 100:101 /etc/nut/ups.conf /etc/nut/upsd.conf /etc/nut/upsd.users &&
+      chmod 0440 /etc/nut/ups.conf /etc/nut/upsd.conf /etc/nut/upsd.users
+      "
+
+  sigennut:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    depends_on:
+      invforge:
+        condition: service_healthy
+      nut-config-init:
+        condition: service_completed_successfully
+    volumes:
+      - nut-config:/etc/nut:ro
+    ports:
+      - "3493:3493"
+
+volumes:
+  nut-config:
