@@ -38,34 +38,57 @@ This builds and runs `sigennut` alongside
 [InvForge](https://github.com/miklosbagi/invforge), a multi-vendor
 inverter/BESS simulator, pre-loaded with real captured SigenStor register
 data — so you can see it working with zero hardware. See
-`docker-compose.yml`.
+`docker-compose.yml`. That builds both images from source (this repo's
+`docker/Dockerfile`, InvForge's own repo via a git-context build) — good
+for testing local changes to either, slower otherwise.
 
-## Running against your own SigenStor
+## docker-compose examples (published images, no repo checkout needed)
 
-```sh
-mkdir -p config
-cp docker/files/ups.conf.sample config/ups.conf
-cp docker/files/upsd.conf.sample config/upsd.conf
-cp docker/files/upsd.users.sample config/upsd.users
-# edit config/ups.conf: set `port` to your device's host:port (Modbus TCP, default 502)
-```
+For everyone else, `examples/` has ready-to-run compose files using the
+published `miklosbagi/sigennut` and `miklosbagi/invforge` images
+directly — copy either one down and run it, no `git clone` required.
 
-Then build and run just the `sigennut` image (skip the `invforge` service),
-mounting `./config` at `/etc/nut` instead of the `nut-config` volume the
-compose demo uses — the same `nut-config-init` approach in
-`docker-compose.yml` works here too if you'd rather not deal with
-permissions by hand; gpdm/nut-upsd's own convention (which this image
-follows) requires `/etc/nut`'s files to be exactly mode `0440`, owned by
-uid 100 / gid 101 (see `docker/files/startup.sh`).
+**Against InvForge** (zero hardware) —
+[`examples/docker-compose.emulator.yml`](examples/docker-compose.emulator.yml):
 
 ```sh
-docker build -f docker/Dockerfile -t sigennut .
-docker run -d --name sigennut \
-  -v "$(pwd)/config:/etc/nut:ro" \
-  -p 3493:3493 \
-  sigennut
+docker compose -f docker-compose.emulator.yml up -d
 upsc sigen@localhost
 ```
+
+**Against your own SigenStor** —
+[`examples/docker-compose.real-device.yml`](examples/docker-compose.real-device.yml):
+
+```sh
+SIGENSTOR_HOST=192.168.1.50 docker compose -f docker-compose.real-device.yml up -d
+upsc sigen@localhost
+```
+
+`SIGENSTOR_HOST` is your device's Modbus TCP `host` or `host:port`
+(default port 502 if omitted) — compose refuses to start if it's unset,
+rather than silently generating a broken `ups.conf`.
+
+Both examples generate `/etc/nut`'s config entirely inline, via a
+one-shot init container writing into a named volume — not compose's own
+`configs:` mechanism, which mounts individual files rather than the
+directory itself and so doesn't satisfy `startup.sh`'s check that
+`/etc/nut` is a real mounted volume (confirmed the hard way). Same
+permissions gpdm/nut-upsd's own convention requires either way: `0440`,
+owned by uid 100 / gid 101 (see `docker/files/startup.sh`).
+
+**Just InvForge, standalone** (no sigennut/NUT at all — e.g. testing a
+different Modbus client against it):
+
+```sh
+docker run -d --name invforge \
+  -p 5020:502 -p 8080:8080 \
+  miklosbagi/invforge:latest \
+  --vendor sigenergy --firmware V100R001C21SPC116 \
+  --scenario 2026-08-14-idle-full-soc
+```
+
+See [InvForge's own README](https://github.com/miklosbagi/invforge) for
+its full scenario library and HTTP control API.
 
 ## How the image is built
 

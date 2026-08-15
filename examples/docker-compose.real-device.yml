@@ -1,0 +1,39 @@
+# sigennut against a real SigenStor, as a published image -- no repo
+# checkout needed.
+#
+# Usage:
+#   SIGENSTOR_HOST=192.168.1.50 docker compose -f docker-compose.real-device.yml up -d
+#   upsc sigen@localhost
+#
+# SIGENSTOR_HOST is your device's Modbus TCP host[:port] (default port
+# 502 if omitted). Compose refuses to start if it's unset, rather than
+# silently generating a broken ups.conf.
+
+services:
+  # See docker-compose.emulator.yml for why this is a one-shot init
+  # container writing into a named volume, not compose's own `configs:`.
+  nut-config-init:
+    image: alpine:edge
+    volumes:
+      - nut-config:/etc/nut
+    command: >
+      sh -c '
+      printf "[sigen]\n  driver = sigenergy_modbus\n  port = ${SIGENSTOR_HOST:?set SIGENSTOR_HOST to your devices host or host:port, e.g. 192.168.1.50}\n  desc = sigennut\n" > /etc/nut/ups.conf &&
+      printf "LISTEN 0.0.0.0 3493\n" > /etc/nut/upsd.conf &&
+      printf "[monuser]\n  password = test\n  upsmon primary\n" > /etc/nut/upsd.users &&
+      chown 100:101 /etc/nut/ups.conf /etc/nut/upsd.conf /etc/nut/upsd.users &&
+      chmod 0440 /etc/nut/ups.conf /etc/nut/upsd.conf /etc/nut/upsd.users
+      '
+
+  sigennut:
+    image: miklosbagi/sigennut:latest
+    depends_on:
+      nut-config-init:
+        condition: service_completed_successfully
+    volumes:
+      - nut-config:/etc/nut:ro
+    ports:
+      - "3493:3493"
+
+volumes:
+  nut-config:

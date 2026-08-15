@@ -49,3 +49,37 @@ jobs:
 
       - if: always()
         run: docker compose down
+
+  # Separate job, deliberately: this tests examples/docker-compose.emulator.yml
+  # against whatever's *currently published* on Docker Hub (miklosbagi/sigennut:latest),
+  # not this PR's own code -- it validates the documented published-image
+  # onboarding path still works, not code changes in this PR. A failure
+  # here means the README's copy-paste example is broken, which is a real
+  # finding regardless of what this specific PR touches.
+  published-image-example:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install upsc (nut-client)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends nut-client
+
+      - name: Bring up examples/docker-compose.emulator.yml
+        run: docker compose -f examples/docker-compose.emulator.yml up -d
+
+      - name: Wait for sigen@localhost to report real data
+        run: |
+          for i in $(seq 1 30); do
+            if out=$(upsc sigen@localhost 2>/dev/null) && grep -q '^battery.charge: 100.0$' <<< "$out"; then
+              echo "$out"
+              echo "OK: the published-image example works."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::examples/docker-compose.emulator.yml never reported the expected data after 60s -- the README's published-image quickstart is broken."
+          docker compose -f examples/docker-compose.emulator.yml logs
+          exit 1
+
+      - if: always()
+        run: docker compose -f examples/docker-compose.emulator.yml down -v
