@@ -1,0 +1,50 @@
+name: e2e
+
+# Scenario-level tests: sigennut built from this PR's own source, run
+# against InvForge's published :latest image, asserting the real NUT
+# status/values `upsc` reports for each battery state -- not just that
+# the pieces boot (see ci.yml for that), but that the driver's
+# OL/OB/LB/CHRG/DISCHRG mapping is actually correct against real and
+# synthetic register data.
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  scenario-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r tests/e2e/requirements.txt
+
+      - name: Install upsc (nut-client)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends nut-client
+
+      - name: Bring up sigennut (this PR's source) + InvForge (:latest)
+        run: docker compose -f tests/e2e/docker-compose.yml up -d --build
+
+      - name: Wait for the stack to be reachable
+        run: |
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:8080/health && exit 0
+            sleep 1
+          done
+          echo "::error::stack never became reachable"
+          exit 1
+
+      - name: Run scenario tests
+        run: pytest tests/e2e -v
+
+      - if: failure()
+        run: docker compose -f tests/e2e/docker-compose.yml logs
+
+      - if: always()
+        run: docker compose -f tests/e2e/docker-compose.yml down -v
