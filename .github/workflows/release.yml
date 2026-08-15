@@ -1,0 +1,83 @@
+name: Version & Release
+
+# Tagging/release happens on merge, reading whichever Tag/* label the PR
+# carried at that point -- not at label-add time. That's a deliberate
+# choice: tagging the PR branch's head commit as soon as a label is
+# added would (a) create an orphan tag if the PR is later closed
+# unmerged, and (b) point at a commit SHA that doesn't survive a squash
+# merge (main gets a brand-new commit). Using
+# `pull_request.merge_commit_sha` from the `closed`+merged event instead
+# is correct for merge, squash, and rebase alike, and never tags
+# anything that didn't actually land on main.
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+
+jobs:
+  tag-and-release:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Determine bump level from the merged PR's labels
+        id: bump
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          labels=$(gh pr view "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}" --json labels --jq '.labels[].name')
+          matches=$(grep -cE '^Tag/(Patch|Minor|Major)$' <<< "$labels" || true)
+
+          if [ "$matches" -eq 0 ]; then
+            echo "No Tag/* label on this PR -- skipping version bump and release."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "$matches" -gt 1 ]; then
+            echo "::error::More than one Tag/* label on the merged PR -- the validate-version-label required check should have blocked this. Refusing to guess which one wins."
+            exit 1
+          fi
+
+          if grep -qxE 'Tag/Major' <<< "$labels"; then
+            echo "level=major" >> "$GITHUB_OUTPUT"
+          elif grep -qxE 'Tag/Minor' <<< "$labels"; then
+            echo "level=minor" >> "$GITHUB_OUTPUT"
+          else
+            echo "level=patch" >> "$GITHUB_OUTPUT"
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - name: Compute next version
+        if: steps.bump.outputs.skip != 'true'
+        id: version
+        run: |
+          latest=$(git tag -l | { grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' || true; } | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
+          latest=${latest:-0.0.0}
+          IFS='.' read -r major minor patch <<< "$latest"
+          case "${{ steps.bump.outputs.level }}" in
+            major) major=$((major + 1)); minor=0; patch=0 ;;
+            minor) minor=$((minor + 1)); patch=0 ;;
+            patch) patch=$((patch + 1)) ;;
+            *) echo "::error::unknown bump level '${{ steps.bump.outputs.level }}'"; exit 1 ;;
+          esac
+          new="$major.$minor.$patch"
+          echo "Bumping $latest -> $new (${{ steps.bump.outputs.level }})"
+          echo "new_version=$new" >> "$GITHUB_OUTPUT"
+
+      - name: Create tag + release
+        if: steps.bump.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.version.outputs.new_version }}" \
+            --repo "${{ github.repository }}" \
+            --target "${{ github.event.pull_request.merge_commit_sha }}" \
+            --title "${{ steps.version.outputs.new_version }}" \
+            --generate-notes
