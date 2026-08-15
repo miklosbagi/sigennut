@@ -1,0 +1,51 @@
+name: ci
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # startup.sh is kept near-verbatim from gpdm/nut-upsd (BSD license
+      # notice intact, see README.md) -- not ours to rewrite for style.
+      # Only fail on things that would actually break it.
+      - name: Shellcheck startup.sh
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends shellcheck
+          shellcheck --severity=error docker/files/startup.sh
+
+      - name: Build the sigennut image
+        run: docker build -f docker/Dockerfile -t sigennut:ci .
+
+      - name: Install upsc (nut-client)
+        run: |
+          sudo apt-get install -y --no-install-recommends nut-client
+
+      - name: Smoke test against InvForge over docker compose
+        run: |
+          docker compose up -d --build
+          docker compose ps
+
+          echo "Waiting for sigen@localhost to report real data..."
+          for i in $(seq 1 30); do
+            if out=$(upsc sigen@localhost 2>/dev/null) && grep -q '^battery.charge: 100.0$' <<< "$out"; then
+              echo "$out"
+              echo "OK: sigennut is serving InvForge's captured idle/full-SoC data."
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "::error::sigennut never reported the expected captured data after 60s."
+          docker compose logs
+          exit 1
+
+      - if: always()
+        run: docker compose down
