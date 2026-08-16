@@ -3,7 +3,7 @@
  *  as a single UPS via its Modbus TCP interface.
  *
  *  Copyright (C)
- *    2026  Miklos Bagi <mb_sigennut@mbag.at>
+ *    2026  Miklos Bagi <mb_nutdco@mbag.at>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -23,19 +23,17 @@
 /*
  * Register addresses and their meanings are sourced from Sigenergy's
  * own official Modbus Protocol spec (V2.9), cross-checked against real
- * device captures. See ../../nut-sigenergy/docs/driver-coding-standards.md
- * and ../../sigennut/docs/register-map.md (sibling research repos) for
- * the full provenance, including one still-open item this driver's
- * OL/OB mapping depends on:
+ * device captures on a live installation. One item this driver's OL/OB
+ * mapping depends on is still open:
  *
- * R11 (from sigennut's PRD): `on_off_grid_status` (30009) is documented
- * by the spec as the plant's real on/off-grid signal, and that mapping
- * is used directly below -- but it has not yet been validated against
- * an actual real-world grid-loss/grid-return transition on the specific
- * installation this was developed against (no grid was ever wired to
- * that unit). Treat OL/OB as spec-correct-by-design but not yet
- * field-proven; revisit if a real transition is ever observed to behave
- * differently than expected.
+ * `on_off_grid_status` (30009) is documented by the spec as the plant's
+ * real on/off-grid signal, and that mapping is used directly below --
+ * but it has not yet been validated against an actual real-world
+ * grid-loss/grid-return transition on the specific installation this
+ * was developed against (no grid was ever wired to that unit). Treat
+ * OL/OB as spec-correct-by-design but not yet field-proven; revisit if
+ * a real transition is ever observed to behave differently than
+ * expected.
  *
  * This is a deliberately minimal first driver (project outline "Phase
  * 1"): OL / OB / LB / CHRG / DISCHRG, battery.charge, input.voltage,
@@ -92,7 +90,7 @@
 upsdrv_info_t upsdrv_info = {
 	DRIVER_NAME,
 	DRIVER_VERSION,
-	"Miklos Bagi <mb_sigennut@mbag.at>",
+	"Miklos Bagi <mb_nutdco@mbag.at>",
 	DRV_EXPERIMENTAL,
 	{ NULL }
 };
@@ -114,8 +112,7 @@ static int errcount = 0;
  * here). No IPv6 bracket handling needed: Sigenergy's Modbus TCP
  * interface is IPv4/hostname only.
  */
-static int parse_host_port(const char *input, char *host, size_t host_buf_size,
-	char *port, size_t port_buf_size, uint16_t default_port)
+static int parse_host_port(const char *input, char *host, size_t host_buf_size, char *port, size_t port_buf_size, uint16_t default_port)
 {
 	const char *colon;
 	size_t host_size, port_size;
@@ -175,8 +172,7 @@ static int read_regs(int unit, int addr, int count, uint16_t *dest)
 	}
 
 	if (modbus_read_registers(mbctx, addr, count, dest) == -1) {
-		upslogx(LOG_ERR, "read_regs: unit %d addr %d count %d: %s",
-			unit, addr, count, modbus_strerror(errno));
+		upslogx(LOG_ERR, "read_regs: unit %d addr %d count %d: %s", unit, addr, count, modbus_strerror(errno));
 		errcount++;
 		return -1;
 	}
@@ -267,7 +263,13 @@ void upsdrv_initinfo(void)
 	 * "Low-Battery Policy" section: BESS reserve is a policy choice,
 	 * not something to blindly inherit from the device. */
 	if (getval("low_battery_soc")) {
-		low_battery_soc = strtod(getval("low_battery_soc"), NULL);
+		char *soc_endptr;
+		const char *soc_arg = getval("low_battery_soc");
+
+		low_battery_soc = strtod(soc_arg, &soc_endptr);
+		if (soc_endptr == soc_arg || *soc_endptr != '\0') {
+			fatalx(EXIT_FAILURE, "upsdrv_initinfo: low_battery_soc '%s' is not a valid number", soc_arg);
+		}
 	} else if (read_regs(plant_addr, REG_ESS_DISCHARGE_CUTOFF_SOC, 1, &reg) == 0 && reg > 0) {
 		low_battery_soc = reg / 10.0;
 	}
@@ -284,9 +286,7 @@ void upsdrv_updateinfo(void)
 
 	errcount = 0;
 
-	if (read_regs(plant_addr, REG_ON_OFF_GRID_STATUS, 1, &grid_status) == -1
-		|| read_regs(plant_addr, REG_ESS_SOC, 1, &soc) == -1
-		|| read_regs(plant_addr, REG_ESS_POWER, 2, ess_power_regs) == -1) {
+	if (read_regs(plant_addr, REG_ON_OFF_GRID_STATUS, 1, &grid_status) == -1 || read_regs(plant_addr, REG_ESS_SOC, 1, &soc) == -1 || read_regs(plant_addr, REG_ESS_POWER, 2, ess_power_regs) == -1) {
 		dstate_datastale();
 		return;
 	}
@@ -330,12 +330,7 @@ void upsdrv_updateinfo(void)
 	 * spec's Appendix 2-13 enumerations is deferred, see this file's
 	 * header comment (R2/Phase 3). general_alarm7 (30281) is
 	 * deliberately excluded here, see header comment. */
-	if (read_regs(plant_addr, REG_GENERAL_ALARM1, 1, &alarm1) == 0
-		&& read_regs(plant_addr, REG_GENERAL_ALARM2, 1, &alarm2) == 0
-		&& read_regs(plant_addr, REG_GENERAL_ALARM3, 1, &alarm3) == 0
-		&& read_regs(plant_addr, REG_GENERAL_ALARM4, 1, &alarm4) == 0
-		&& read_regs(plant_addr, REG_GENERAL_ALARM5, 1, &alarm5) == 0
-		&& read_regs(plant_addr, REG_GENERAL_ALARM6, 1, &alarm6) == 0) {
+	if (read_regs(plant_addr, REG_GENERAL_ALARM1, 1, &alarm1) == 0 && read_regs(plant_addr, REG_GENERAL_ALARM2, 1, &alarm2) == 0 && read_regs(plant_addr, REG_GENERAL_ALARM3, 1, &alarm3) == 0 && read_regs(plant_addr, REG_GENERAL_ALARM4, 1, &alarm4) == 0 && read_regs(plant_addr, REG_GENERAL_ALARM5, 1, &alarm5) == 0 && read_regs(plant_addr, REG_GENERAL_ALARM6, 1, &alarm6) == 0) {
 		if (alarm1 || alarm2 || alarm3 || alarm4 || alarm5 || alarm6) {
 			status_set("ALARM");
 		}
@@ -367,12 +362,7 @@ void upsdrv_shutdown(void)
 
 void upsdrv_help(void)
 {
-	printf("\nSigenergy-specific options:\n"
-		"  plant_addr: Modbus unit id for plant-level registers (default: %d)\n"
-		"  inverter_addr: Modbus unit id for inverter-level registers (default: %d)\n"
-		"  low_battery_soc: LB threshold in %% state-of-charge (default: device's own\n"
-		"    configured reserve floor if nonzero, else %.0f)\n",
-		DEFAULT_PLANT_ADDR, DEFAULT_INVERTER_ADDR, DEFAULT_LOW_BATTERY_SOC);
+	printf("\nSigenergy-specific options:\n" "  plant_addr: Modbus unit id for plant-level registers (default: %d)\n" "  inverter_addr: Modbus unit id for inverter-level registers (default: %d)\n" "  low_battery_soc: LB threshold in %% state-of-charge (default: device's own\n" "    configured reserve floor if nonzero, else %.0f)\n", DEFAULT_PLANT_ADDR, DEFAULT_INVERTER_ADDR, DEFAULT_LOW_BATTERY_SOC);
 }
 
 void upsdrv_tweak_prognames(void)

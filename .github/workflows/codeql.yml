@@ -28,9 +28,9 @@ jobs:
       - name: Fetch upstream NUT and vendor in the driver
         run: |
           git clone --depth 1 --branch master https://github.com/networkupstools/nut.git
-          cp driver/sigenergy_modbus.c nut/drivers/sigenergy_modbus.c
+          cp nut-driver/sigenergy_modbus.c nut/drivers/sigenergy_modbus.c
           cd nut
-          git apply ../driver/sigenergy_modbus-makefile.patch
+          git apply ../nut-driver/sigenergy_modbus-makefile.patch
 
       - uses: github/codeql-action/init@v3
         with:

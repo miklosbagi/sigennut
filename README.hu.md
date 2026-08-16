@@ -20,18 +20,26 @@ rendszert UPS-ként lehessen felügyelni a Modbus TCP interfészén keresztül
 azonosítás, közvetlenül a plant és inverter Modbus regisztereiből.
 
 **Állapot: még nincs upstreamben.** A
-[`driver/sigenergy_modbus.c`](driver/sigenergy_modbus.c) a NUT saját
-driver API-ja és kódolási szabályai szerint íródott, azzal a céllal, hogy
-végül közvetlenül bekerüljön a
-[`networkupstools/nut`](https://github.com/networkupstools/nut) projektbe
-— de az ehhez tartozó PR még nincs megnyitva. Ez a repó azért létezik,
-hogy a drivert *már most* tesztelhesd, a saját SigenStorodon, anélkül
-hogy erre várnod kellene. Ez az image forrásból építi a NUT-ot (alapból
-az upstream `master` ágból), és beépíti ezt a drivert a
-[`driver/sigenergy_modbus-makefile.patch`](driver/sigenergy_modbus-makefile.patch)
-segítségével — amint a driver bekerül az upstreambe, ez a repó feleslegessé
-válik mindenki számára, aki elég friss NUT-verziót futtat ahhoz, hogy az
-már tartalmazza.
+[`nut-driver/sigenergy_modbus.c`](nut-driver/sigenergy_modbus.c) a NUT
+saját driver API-ja és kódolási szabályai szerint íródott, azzal a
+céllal, hogy végül közvetlenül bekerüljön a
+[`networkupstools/nut`](https://github.com/networkupstools/nut)
+projektbe. Ez a repó a driver tényleges forrása — nem egy fork vagy PR
+ág lemásolt változata: a `nut-driver/` itt fejlesztve és verziózva van,
+és időről időre kerül csak exportálásra egy fork-ba
+(`miklosbagi/nut`), pusztán az upstream felé történő javaslattétel
+előkészítéseként. Ez szándékos sorrend, nem csupán kényelmi szempont:
+semmi nem garantálja, hogy az upstream elfogadja az új drivert, így a
+`sigennut` pontosan ugyanúgy működik tovább, függetlenül attól, hogy azt
+a PR-t elfogadják, elutasítják, vagy soha nem dől el — legrosszabb
+esetben ez egy tartósan karbantartott "NUT plusz ez az egy driver" image
+marad, nem valami, ami leáll működni, ha az upstream nemet mond. Ez az
+image forrásból építi a NUT-ot (alapból az upstream `master` ágból), és
+beépíti ezt a drivert a
+[`nut-driver/sigenergy_modbus-makefile.patch`](nut-driver/sigenergy_modbus-makefile.patch)
+segítségével — ha/amint a driver bekerül az upstreambe, ez a patch-lépés
+(de maga a driver nem) feleslegessé válik mindenki számára, aki elég
+friss NUT-verziót futtat ahhoz, hogy az már tartalmazza.
 
 Tervezésénél fogva csak olvas: ez a driver sehol nem tartalmaz
 `modbus_write_*` hívást. Nem konfigurálja át az invertert, nem ütemez
@@ -91,8 +99,8 @@ A `docker/Dockerfile` egy kétlépcsős build:
 
 1. **builder** — sekély (shallow) klónozást végez az upstream NUT-ból
    (`ARG NUT_REF`, alapból `master`), bemásolja a
-   `driver/sigenergy_modbus.c`-t, alkalmazza a
-   `driver/sigenergy_modbus-makefile.patch`-et (hangosan elbukik a build,
+   `nut-driver/sigenergy_modbus.c`-t, alkalmazza a
+   `nut-driver/sigenergy_modbus-makefile.patch`-et (hangosan elbukik a build,
    ha az upstream `drivers/Makefile.am`-ja túl sokat változott ahhoz,
    hogy a patch alkalmazható legyen — ez jobb, mintha csendben olyan
    image készülne, amelybe a driver nincs bekötve), majd konfigurálja és
@@ -120,7 +128,7 @@ pontosan `0440` móddal, `nut:nut` tulajdonossal rendelkezik, majd lefut az
 
 GPL-2.0-or-later — lásd [LICENSE](LICENSE). Ugyanaz, mint maga a
 [NUT](https://github.com/networkupstools/nut), és a
-[`driver/sigenergy_modbus.c`](driver/sigenergy_modbus.c) saját fejléce,
+[`nut-driver/sigenergy_modbus.c`](nut-driver/sigenergy_modbus.c) saját fejléce,
 mivel ez az image mindkettőt újraterjeszti.
 
 A `docker/files/startup.sh` a

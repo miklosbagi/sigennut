@@ -7,6 +7,28 @@ on:
     branches: ["main"]
 
 jobs:
+  # NUT's own docs/developers.txt describes this indent invocation as
+  # something that "goes a long way towards" the house style, not a
+  # strictly CI-enforced formatter -- upstream itself doesn't gate on a
+  # zero-diff result. We hold ourselves to that bar anyway, deliberately
+  # stricter than what's actually required: it's cheap, objective, and
+  # removes any ambiguity before this driver is ever proposed upstream.
+  nut-driver-style:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install GNU indent
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends indent
+
+      - name: Check nut-driver/sigenergy_modbus.c formatting
+        run: |
+          indent -kr -i8 -T FILE -l1000 -nhnl -o /tmp/formatted.c nut-driver/sigenergy_modbus.c
+          if ! diff -u nut-driver/sigenergy_modbus.c /tmp/formatted.c; then
+            echo "::error::nut-driver/sigenergy_modbus.c doesn't match 'indent -kr -i8 -T FILE -l1000 -nhnl' -- run that command locally and commit the result."
+            exit 1
+          fi
+
   ci:
     runs-on: ubuntu-latest
     steps:
