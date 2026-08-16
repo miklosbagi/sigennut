@@ -11,11 +11,18 @@
 #
 # Unlike gpdm's image (which apk-installs stock NUT only), this one
 # clones upstream NUT fresh at build time, vendors in
-# ../driver/sigenergy_modbus.c (this driver isn't in NUT yet), and
-# applies ../driver/sigenergy_modbus-makefile.patch to wire it into the
-# build -- then, same as gpdm, apk-installs stock NUT for upsd/
+# ../nut-driver/sigenergy_modbus.c (this driver isn't in NUT yet), and
+# applies ../nut-driver/sigenergy_modbus-makefile.patch to wire it into
+# the build -- then, same as gpdm, apk-installs stock NUT for upsd/
 # upsdrvctl/the nut user, and splices in the freshly compiled driver
 # binary on top of it.
+#
+# nut-driver/ is deliberately this repo's own source of truth for the
+# driver, not a build-time dependency on any fork/PR -- this image
+# keeps working exactly the same way regardless of what happens to any
+# upstream submission (accepted, rejected, or never resolved). Fork
+# branches are just a periodic export target for actually proposing the
+# driver upstream, not something this build relies on.
 
 ARG NUT_REF=master
 
@@ -36,8 +43,8 @@ WORKDIR /src
 
 RUN git clone --depth 1 --branch "${NUT_REF}" https://github.com/networkupstools/nut.git
 
-COPY driver/sigenergy_modbus.c nut/drivers/sigenergy_modbus.c
-COPY driver/sigenergy_modbus-makefile.patch /tmp/sigenergy_modbus-makefile.patch
+COPY nut-driver/sigenergy_modbus.c nut/drivers/sigenergy_modbus.c
+COPY nut-driver/sigenergy_modbus-makefile.patch /tmp/sigenergy_modbus-makefile.patch
 
 WORKDIR /src/nut
 

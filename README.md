@@ -19,15 +19,24 @@ over its Modbus TCP interface — `battery.charge`, `ups.status`
 `ups.realpower`, and device identity, straight from the plant and inverter
 Modbus registers.
 
-**Status: not upstream yet.** [`driver/sigenergy_modbus.c`](driver/sigenergy_modbus.c)
+**Status: not upstream yet.** [`nut-driver/sigenergy_modbus.c`](nut-driver/sigenergy_modbus.c)
 is written against NUT's own driver API and coding standards, aimed at
 eventual inclusion in [`networkupstools/nut`](https://github.com/networkupstools/nut)
-directly — but that PR hasn't been opened yet. This repo exists so you can
-test the driver *now*, against your own SigenStor, without waiting on that.
-This image builds NUT from source (upstream `master`, by default) and
-vendors this driver into it via [`driver/sigenergy_modbus-makefile.patch`](driver/sigenergy_modbus-makefile.patch)
-— once the driver is merged upstream, this repo becomes unnecessary for
-anyone running a NUT version recent enough to include it.
+directly. This repo is that driver's actual source of truth, not a
+downstream copy of some fork or PR branch — `nut-driver/` is developed
+and versioned here, and periodically exported to a fork
+(`miklosbagi/nut`) purely as a staging area for proposing it upstream.
+That's a deliberate ordering, not just convenience: there's no guarantee
+upstream accepts a new driver, and this way `sigennut` keeps working
+exactly the same regardless of whether that PR is accepted, rejected, or
+never resolved — worst case, this becomes a permanently-maintained
+"NUT plus this one driver" image, not something that stops working if
+upstream says no. This image builds NUT from source (upstream `master`,
+by default) and vendors this driver into it via
+[`nut-driver/sigenergy_modbus-makefile.patch`](nut-driver/sigenergy_modbus-makefile.patch)
+— if/once the driver is merged upstream, that patch step (but not the
+driver itself) becomes unnecessary for anyone running a NUT version
+recent enough to include it.
 
 Read-only by design: this driver contains no `modbus_write_*` call
 anywhere. It won't reconfigure your inverter, schedule charging, or touch
@@ -106,8 +115,8 @@ its full scenario library and HTTP control API.
 `docker/Dockerfile` is a two-stage build:
 
 1. **builder** — shallow-clones upstream NUT (`ARG NUT_REF`, default
-   `master`), copies in `driver/sigenergy_modbus.c`, applies
-   `driver/sigenergy_modbus-makefile.patch` (fails the build loudly if
+   `master`), copies in `nut-driver/sigenergy_modbus.c`, applies
+   `nut-driver/sigenergy_modbus-makefile.patch` (fails the build loudly if
    upstream's `drivers/Makefile.am` has drifted too far for the patch to
    apply — better than silently shipping an image without the driver
    wired in), then configures and compiles just this one driver with the
@@ -153,8 +162,8 @@ config file is exactly mode `0440` owned by `nut:nut`, then runs
 
 GPL-2.0-or-later — see [LICENSE](LICENSE). Same as
 [NUT](https://github.com/networkupstools/nut) itself and
-[`driver/sigenergy_modbus.c`](driver/sigenergy_modbus.c)'s own header,
-since this image redistributes both.
+[`nut-driver/sigenergy_modbus.c`](nut-driver/sigenergy_modbus.c)'s own
+header, since this image redistributes both.
 
 `docker/files/startup.sh` is copied from
 [`gpdm/nut-upsd`](https://github.com/gpdm/nut/tree/master/nut-upsd) under
